@@ -2,7 +2,7 @@
     Uses `gpg` to decrypt the necessary files.
 """
 
-import yagmail, subprocess, praw, os, argparse
+import yagmail, subprocess, praw, os, argparse, logging
 
 # PATHS
 user_path = os.path.expanduser("~")
@@ -16,13 +16,12 @@ email_password_command = f"{decrypt_command} {email_password_path}"
 reddit_password_command = f"{decrypt_command} {reddit_password_path}"
 reddit_client_id_command = f"{decrypt_command} {reddit_client_id_path}"
 reddit_client_secret_command = f"{decrypt_command} {reddit_client_secret_path}"
-# VARS
-version = "0.0.1"
+# GLOBALS
+version = "1.0.0"
 subreddit = "mealtimevideos"
 min_post_score = 5
 send_email = False
 print_content = False
-verbose = False
 
 def loadArgs():
     """ Parse and load arguments.
@@ -31,7 +30,6 @@ def loadArgs():
     global send_email
     global print_content
     global subreddit
-    global verbose
 
     # Initializer
     parser = argparse.ArgumentParser(description="Find the most upvoted submissions to a subreddit and email them to the user.")
@@ -47,15 +45,25 @@ def loadArgs():
 
     # Loads arguments
     if args.verbose:
-        verbose = True
+        logging.basicConfig(level=logging.DEBUG, format="%(levelname)s : [%(funcName)s] %(message)s")
+    else:
+        logging.basicConfig(level=logging.INFO, format="%(levelname)s : [%(funcName)s] %(message)s")
+
     if args.email:
         send_email = True
+
     if args.output:
         print_content = True
+
     if args.minscore is not None:
         min_post_score = args.minscore
 
     subreddit = args.subreddit
+
+    logging.debug(f"Print to stdout: {print_content}")
+    logging.debug(f"Send email: {send_email}")
+    logging.debug(f"Min score for submissions: {min_post_score}")
+    logging.debug(f"Subreddit: r/{subreddit}")
 
 def gpgIsFound():
     """ A few checks to see if all necessary gpg files are present.
@@ -65,7 +73,7 @@ def gpgIsFound():
 
     for path in necessary_paths:
         if not os.path.exists(path):
-            print(f"Path to {path} not found, it's necessary that a valid file is present there.")
+            logging.error(f"Path to {path} not found, it's necessary that a valid file is present there.")
             notFound = True
 
     if notFound:
@@ -88,10 +96,10 @@ def formatEmailContent(posts):
     return email_content
 
 def sendMail(posts):
-    """ Send an email.
+    """ Send an email using yagmail.
     """
     email_password = subprocess.getoutput(email_password_command)
-    subject = f"[reddit-picker] The best {len(posts)} posts from r/{subreddit}!"
+    subject = f"The best {len(posts)} posts from r/{subreddit}!"
     body = formatEmailContent(posts)
 
     yag = yagmail.SMTP("otaviocos14@gmail.com", email_password)
@@ -125,6 +133,8 @@ def fetchPosts():
         if new_post['score'] >= min_post_score:
             subreddit_posts.append(new_post)
 
+    logging.debug(f"Found {len(subreddit_posts)} suitable posts.")
+
     return subreddit_posts
 
 def filterPosts(posts):
@@ -136,7 +146,7 @@ def filterPosts(posts):
         scores.append(post['score'])
 
     avg_score = sum(scores) / len(scores)
-    print(f"Calculated score average is {avg_score}")
+    logging.debug(f"Calculated average score is {avg_score}")
 
     # Filter out posts lesser than the threshold.
     filtered_posts = filter(lambda post: post['score'] > avg_score, posts)
@@ -150,6 +160,8 @@ def filterPosts(posts):
 def printPosts(posts):
     """ Prints submissions to stdout.
     """
+    logging.debug(f"Printing {len(posts)} selected posts.")
+
     for post in posts:
         print(f"^{post['score']} : {post['title']}\n{post['url']}")
 
@@ -165,6 +177,6 @@ def main():
         if send_email:
             sendMail(posts)
     else:
-        print(f"You need gpg installed in your system and all files required for this script to work!")
+        logging.error(f"You need gpg installed in your system and all files required for this script to work!")
 
 main()
