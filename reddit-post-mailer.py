@@ -1,8 +1,8 @@
-""" Find the most upvoted reddit content in the last week and send an email with the contents.
+""" Find the most upvoted reddit posts in the last week and send an email with the contents.
     Uses `gpg` to decrypt the necessary files.
 """
 
-import yagmail, subprocess, praw, os, argparse, logging
+import yagmail, subprocess, praw, os, argparse, logging, time, json
 
 # PATHS
 user_path = os.path.expanduser("~")
@@ -20,8 +20,12 @@ reddit_client_secret_command = f"{decrypt_command} {reddit_client_secret_path}"
 version = "1.0.0"
 subreddit = "mealtimevideos"
 min_post_score = 5
+lower_limit = 3
+epoch = 0
 send_email = False
 print_content = False
+print_links = False
+use_epoch = False
 
 def loadArgs():
     """ Parse and load arguments.
@@ -29,6 +33,8 @@ def loadArgs():
     global min_post_score
     global send_email
     global print_content
+    global print_links
+    global use_epoch
     global subreddit
 
     # Initializer
@@ -38,6 +44,8 @@ def loadArgs():
     parser.add_argument("-v", "--verbose", help="Control amount of output.", action="store_true")
     parser.add_argument("-e", "--email", help="Send an email to the user with the selected post contents.", action="store_true")
     parser.add_argument("-o", "--output", help="Print selected posts to stdout.", action="store_true")
+    parser.add_argument("-u", "--urls", help="Print just the links to stdout. Only works when used with --output", action="store_true")
+    parser.add_argument("-a", "--afterutc", help="Only retrieve posts from after the last run.", action="store_true")
     parser.add_argument("-m", "--minscore", type=int, help="The minimum amount of score a post needs to be selected initially. Default = 5")
     # positional
     parser.add_argument("subreddit", help="Subreddit to select the posts from, 'r/' is not necessary.")
@@ -52,8 +60,13 @@ def loadArgs():
     if args.email:
         send_email = True
 
+    if args.afterutc:
+        use_epoch = True
+
     if args.output:
         print_content = True
+        if args.urls:
+            print_links = True
 
     if args.minscore is not None:
         min_post_score = args.minscore
@@ -61,9 +74,32 @@ def loadArgs():
     subreddit = args.subreddit
 
     logging.debug(f"Print to stdout: {print_content}")
+    logging.debug(f"Print links only: {print_links}")
     logging.debug(f"Send email: {send_email}")
     logging.debug(f"Min score for submissions: {min_post_score}")
     logging.debug(f"Subreddit: r/{subreddit}")
+
+def loadLastDate():
+    """ Load the last date the program was ran.
+    """
+    global epoch
+
+    if os.path.isfile("cache.json"):
+        logging.debug("Save found.")
+        with open("cache.json", "r") as cacheFile:
+            epoch = json.load(cacheFile)
+        logging.debug(f"Epoch is now: {epoch}")
+
+def saveDate():
+    """ Save the current epoch (to a file)
+    """
+    global epoch
+    epoch = time.time()
+
+    with open("cache.json", "w") as cacheFile:
+        cacheFile.write(json.dumps(epoch))
+
+    logging.debug("Save successful.")
 
 def gpgIsFound():
     """ A few checks to see if all necessary gpg files are present.
@@ -152,6 +188,11 @@ def filterPosts(posts):
     filtered_posts = filter(lambda post: post['score'] > avg_score, posts)
     filtered_posts = list(filtered_posts)
 
+    if use_epoch:
+        # Filter out posts older than current epoch.
+        filtered_posts = filter(lambda post: post['utc'] > epoch, posts)
+        filtered_posts = list(filtered_posts)
+
     # Sort list by upvotes.
     filtered_posts.sort(key=lambda post: post['score'], reverse=True)
 
@@ -163,19 +204,31 @@ def printPosts(posts):
     logging.debug(f"Printing {len(posts)} selected posts.")
 
     for post in posts:
-        print(f"^{post['score']} : {post['title']}\n{post['url']}")
+        if not print_links:
+            print(f"^{post['score']} : {post['title']}\n{post['url']}")
+        else:
+            print(f"{post['url']}")
 
 def main():
     loadArgs()
+
+    if use_epoch:
+        loadLastDate()
+
     if gpgIsFound():
         posts = fetchPosts()
         posts = filterPosts(posts)
 
-        if print_content:
-            printPosts(posts)
+        if len(posts) > lower_limit:
+            if print_content:
+                printPosts(posts)
 
-        if send_email:
-            sendMail(posts)
+            if send_email:
+                sendMail(posts)
+
+            saveDate()
+        else:
+            print("Nothing to do. Not enough posts retrieved.")
     else:
         logging.error(f"You need gpg installed in your system and all files required for this script to work!")
 
