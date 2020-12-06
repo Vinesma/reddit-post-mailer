@@ -78,7 +78,9 @@ def formatEmailContent(posts):
     """
     email_content = []
     for post in posts:
-        html = f"<h5>{post['score']} Upvotes - <a href={post['url']}>{post['title']}</a></h5>"
+        title = f"<h5>{post['score']} Upvotes - <a href={post['url']}>{post['title']}</a></h5>"
+        link  = f"<a href={post['url']}>{post['url']}</a>"
+        html  = f"<div>{title}{link}</div>"
 
         email_content.append(html)
         email_content.append("<br>")
@@ -89,7 +91,7 @@ def sendMail(posts):
     """ Send an email.
     """
     email_password = subprocess.getoutput(email_password_command)
-    subject = f"[reddit-picker] The best {len(posts)} posts from {subreddit}!"
+    subject = f"[reddit-picker] The best {len(posts)} posts from r/{subreddit}!"
     body = formatEmailContent(posts)
 
     yag = yagmail.SMTP("otaviocos14@gmail.com", email_password)
@@ -127,6 +129,7 @@ def fetchPosts():
 
 def filterPosts(posts):
     """ Take the average score of all submissions and remove posts that fall below the threshold.
+        Also sorts by upvotes.
     """
     scores = []
     for post in posts:
@@ -135,8 +138,12 @@ def filterPosts(posts):
     avg_score = sum(scores) / len(scores)
     print(f"Calculated score average is {avg_score}")
 
+    # Filter out posts lesser than the threshold.
     filtered_posts = filter(lambda post: post['score'] > avg_score, posts)
     filtered_posts = list(filtered_posts)
+
+    # Sort list by upvotes.
+    filtered_posts.sort(key=lambda post: post['score'], reverse=True)
 
     return filtered_posts
 
