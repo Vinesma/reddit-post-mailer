@@ -18,9 +18,10 @@ reddit_client_id_command = f"{decrypt_command} {reddit_client_id_path}"
 reddit_client_secret_command = f"{decrypt_command} {reddit_client_secret_path}"
 # VARS
 version = "0.0.1"
+subreddit = "mealtimevideos"
 min_post_score = 5
 send_email = False
-print_content = True
+print_content = False
 verbose = False
 
 def loadArgs():
@@ -29,6 +30,7 @@ def loadArgs():
     global min_post_score
     global send_email
     global print_content
+    global subreddit
     global verbose
 
     # Initializer
@@ -53,6 +55,8 @@ def loadArgs():
     if args.minscore is not None:
         min_post_score = args.minscore
 
+    subreddit = args.subreddit
+
 def gpgIsFound():
     """ A few checks to see if all necessary gpg files are present.
     """
@@ -72,19 +76,28 @@ def gpgIsFound():
 def formatEmailContent(posts):
     """ Format the contents that will be sent as an email.
     """
-    #TODO
-    pass
+    email_content = []
+    for post in posts:
+        html = f"<h5>{post['score']} Upvotes - <a href={post['url']}>{post['title']}</a></h5>"
 
-def sendMail():
+        email_content.append(html)
+        email_content.append("<br>")
+
+    return email_content
+
+def sendMail(posts):
     """ Send an email.
     """
     email_password = subprocess.getoutput(email_password_command)
+    subject = f"[reddit-picker] The best {len(posts)} posts from {subreddit}!"
+    body = formatEmailContent(posts)
 
     yag = yagmail.SMTP("otaviocos14@gmail.com", email_password)
-    contents = ["This is the body", "Here is more text", "/home/vinesma/Music/HOME/The Moment Before.mp3"]
-    yag.send("otaviocos14@gmail.com", "Test email", contents)
 
-def fetchPosts(subreddit_name):
+    yag.send(subject=subject, contents=body)
+    print("Mail sent.")
+
+def fetchPosts():
     """ Fetch reddit submissions from a subreddit using praw.
     """
     reddit_password = subprocess.getoutput(reddit_password_command)
@@ -95,8 +108,8 @@ def fetchPosts(subreddit_name):
             password=reddit_password, user_agent=f"linux:reddit-picker:v{version} (by /u/Vinesma)",
             username="Vinesma")
 
-    subreddit = reddit.subreddit(subreddit_name)
-    subreddit_posts_iterable = subreddit.new(limit=150)
+    subreddit_name = reddit.subreddit(subreddit)
+    subreddit_posts_iterable = subreddit_name.new(limit=150)
     subreddit_posts = []
 
     for post in subreddit_posts_iterable:
@@ -122,7 +135,8 @@ def filterPosts(posts):
     avg_score = sum(scores) / len(scores)
     print(f"Calculated score average is {avg_score}")
 
-    filtered_posts = list(filter(lambda post: post['score'] > avg_score, posts))
+    filtered_posts = filter(lambda post: post['score'] > avg_score, posts)
+    filtered_posts = list(filtered_posts)
 
     return filtered_posts
 
@@ -130,14 +144,19 @@ def printPosts(posts):
     """ Prints submissions to stdout.
     """
     for post in posts:
-        print(f"{post['score']} : {post['title']}\n{post['url']}")
+        print(f"^{post['score']} : {post['title']}\n{post['url']}")
 
 def main():
+    loadArgs()
     if gpgIsFound():
-        posts = fetchPosts("mealtimevideos")
+        posts = fetchPosts()
         posts = filterPosts(posts)
-        printPosts(posts)
-        # sendMail()
+
+        if print_content:
+            printPosts(posts)
+
+        if send_email:
+            sendMail(posts)
     else:
         print(f"You need gpg installed in your system and all files required for this script to work!")
 
