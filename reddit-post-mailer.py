@@ -122,9 +122,10 @@ def formatEmailContent(posts):
     """
     email_content = []
     for post in posts:
-        title = f"<h5>{post['score']} Upvotes - <a href={post['url']}>{post['title']}</a></h5>"
+        title = f"<h5>{post['score']} upvotes - <a href={post['url']}>{post['title']}</a></h5>"
         link  = f"<a href={post['url']}>{post['url']}</a>"
-        html  = f"<div>{title}{link}</div>"
+        comments = f"<a href={post['permalink']}>{post['comment_quantity']} comments</a>"
+        html  = f"<div>{title}<ul><li>{link}</li><li>{comments}</li></ul></div>"
 
         email_content.append(html)
         email_content.append("<br>")
@@ -161,7 +162,7 @@ def fetchPosts():
     for post in subreddit_posts_iterable:
         new_post = {
                 "id": post.id, "title": post.title,
-                "score": post.score, "comment_quantity": post.num_comments,
+                "score": post.score, "comment_quantity": post.num_comments, "permalink": post.permalink,
                 "utc": post.created_utc,
                 "url": post.url
                 }
