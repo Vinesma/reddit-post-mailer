@@ -17,7 +17,7 @@ reddit_password_command = f"{decrypt_command} {reddit_password_path}"
 reddit_client_id_command = f"{decrypt_command} {reddit_client_id_path}"
 reddit_client_secret_command = f"{decrypt_command} {reddit_client_secret_path}"
 # GLOBALS
-version = "1.0.0"
+version = "1.2.1"
 subreddit = "mealtimevideos"
 min_post_score = 5
 lower_limit = 3
@@ -191,7 +191,7 @@ def filterPosts(posts):
 
     if use_epoch:
         # Filter out posts older than current epoch.
-        filtered_posts = filter(lambda post: post['utc'] > epoch, posts)
+        filtered_posts = filter(lambda post: post['utc'] > epoch, filtered_posts)
         filtered_posts = list(filtered_posts)
 
     # Sort list by upvotes.
