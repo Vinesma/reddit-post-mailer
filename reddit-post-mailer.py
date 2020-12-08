@@ -1,4 +1,4 @@
-""" Find the most upvoted reddit posts in the last week and send an email with the contents.
+""" Find the most upvoted reddit posts and send an email with the contents.
     Uses `gpg` to decrypt the necessary files.
 """
 
@@ -105,15 +105,11 @@ def gpgIsFound():
     """ A few checks to see if all necessary gpg files are present.
     """
     necessary_paths = ["/usr/bin/gpg", email_password_path, reddit_password_path, reddit_client_id_path, reddit_client_secret_path]
-    notFound = False
 
     for path in necessary_paths:
         if not os.path.exists(path):
             logging.error(f"Path to {path} not found, it's necessary that a valid file is present there.")
-            notFound = True
-
-    if notFound:
-        return False
+            return False
 
     return True
 
@@ -176,7 +172,8 @@ def fetchPosts():
 
 def filterPosts(posts):
     """ Take the average score of all submissions and remove posts that fall below the threshold.
-        Also sorts by upvotes.
+        Can filter older posts.
+        Finally, it sorts by upvotes.
     """
     scores = []
     for post in posts:
@@ -220,6 +217,7 @@ def main():
         posts = fetchPosts()
         posts = filterPosts(posts)
 
+        # Do not return anything if fewer posts than {lower_limit} are found.
         if len(posts) > lower_limit:
             if print_content:
                 printPosts(posts)
