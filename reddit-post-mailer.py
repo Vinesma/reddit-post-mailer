@@ -19,6 +19,7 @@ reddit_client_secret_command = f"{decrypt_command} {reddit_client_secret_path}"
 # GLOBALS
 version = "1.2.1"
 subreddit = "mealtimevideos"
+num_fetched_posts = 150
 min_post_score = 5
 lower_limit = 3
 epoch = 0
@@ -30,6 +31,7 @@ use_epoch = False
 def loadArgs():
     """ Parse and load arguments.
     """
+    global num_fetched_posts
     global min_post_score
     global send_email
     global print_content
@@ -46,7 +48,8 @@ def loadArgs():
     parser.add_argument("-o", "--output", help="Print selected posts to stdout.", action="store_true")
     parser.add_argument("-u", "--urls", help="Print just the links to stdout. Only works when used with --output", action="store_true")
     parser.add_argument("-a", "--afterutc", help="Only retrieve posts from after the last run.", action="store_true")
-    parser.add_argument("-m", "--minscore", type=int, help="The minimum amount of score a post needs to be selected initially. Default = 5")
+    parser.add_argument("-m", "--minscore", type=int, help=f"The minimum amount of score a post needs to be selected initially. Default = {min_post_score}")
+    parser.add_argument("-n", "--numfetch", type=int, help=f"How many posts to fetch from reddit. Default = {num_fetched_posts}")
     # positional
     parser.add_argument("subreddit", help="Subreddit to select the posts from, 'r/' is not necessary.")
     args = parser.parse_args()
@@ -71,12 +74,16 @@ def loadArgs():
     if args.minscore is not None:
         min_post_score = args.minscore
 
+    if args.numfetch is not None:
+        num_fetched_posts = args.numfetch
+
     subreddit = args.subreddit
 
     logging.debug(f"Print to stdout: {print_content}")
     logging.debug(f"Print links only: {print_links}")
     logging.debug(f"Send email: {send_email}")
-    logging.debug(f"Min score for submissions: {min_post_score}")
+    logging.debug(f"Number of posts to fetch from reddit: {num_fetched_posts}")
+    logging.debug(f"Minimum score for submissions: {min_post_score}")
     logging.debug(f"Subreddit: r/{subreddit}")
 
 def loadLastDate():
@@ -152,7 +159,7 @@ def fetchPosts():
             username="Vinesma")
 
     subreddit_name = reddit.subreddit(subreddit)
-    subreddit_posts_iterable = subreddit_name.new(limit=150)
+    subreddit_posts_iterable = subreddit_name.new(limit=num_fetched_posts)
     subreddit_posts = []
 
     for post in subreddit_posts_iterable:
@@ -225,7 +232,8 @@ def main():
             if send_email:
                 sendMail(posts)
 
-            saveDate()
+            if use_epoch:
+                saveDate()
         else:
             print("Nothing to do. Not enough posts retrieved.")
     else:
