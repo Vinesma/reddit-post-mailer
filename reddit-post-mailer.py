@@ -128,6 +128,7 @@ def formatEmailContent(posts):
         title = f"<h5>{post['score']} upvotes - <a href={post['url']}>{post['title']}</a></h5>"
         link  = f"<a href={post['url']}>{post['url']}</a>"
         comments = f"<a href={post['permalink']}>{post['comment_quantity']} comments</a>"
+
         html  = f"<div>{title}<ul><li>{link}</li><li>{comments}</li></ul></div>"
 
         email_content.append(html)
@@ -139,7 +140,13 @@ def sendMail(posts):
     """ Send an email using yagmail.
     """
     email_password = subprocess.getoutput(email_password_command)
-    subject = f"The best {len(posts)} posts from r/{subreddit}!"
+
+    if use_epoch:
+        epoch_human_readable = time.localtime(epoch)
+        year, month, day = epoch_human_readable[:3]
+        subject = f"The best {len(posts)} posts from r/{subreddit} since {day}/{month}/{year}!"
+    else:
+        subject = f"The best {len(posts)} posts from r/{subreddit}!"
     body = formatEmailContent(posts)
 
     yag = yagmail.SMTP("otaviocos14@gmail.com", email_password)
@@ -165,7 +172,7 @@ def fetchPosts():
     for post in subreddit_posts_iterable:
         new_post = {
                 "id": post.id, "title": post.title,
-                "score": post.score, "comment_quantity": post.num_comments, "permalink": post.permalink,
+                "score": post.score, "comment_quantity": post.num_comments, "permalink": f"https://www.reddit.com{post.permalink}",
                 "utc": post.created_utc,
                 "url": post.url
                 }
