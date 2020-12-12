@@ -43,22 +43,22 @@ def loadArgs():
     parser = argparse.ArgumentParser(description="Find the most upvoted submissions to a subreddit and email them to the user.")
     # Argument definition
     # optional
-    parser.add_argument("-v", "--verbose", help="Control amount of output.", action="store_true")
-    parser.add_argument("-e", "--email", help="Send an email to the user with the selected post contents.", action="store_true")
-    parser.add_argument("-o", "--output", help="Print selected posts to stdout.", action="store_true")
-    parser.add_argument("-u", "--urls", help="Print just the links to stdout. Only works when used with --output", action="store_true")
-    parser.add_argument("-a", "--afterutc", help="Only retrieve posts from after the last run.", action="store_true")
-    parser.add_argument("-m", "--minscore", type=int, help=f"The minimum amount of score a post needs to be selected initially. Default = {min_post_score}")
-    parser.add_argument("-n", "--numfetch", type=int, help=f"How many posts to fetch from reddit. Default = {num_fetched_posts}")
+    parser.add_argument("-v", "--verbose", help="make the application more verbose.", action="store_true")
+    parser.add_argument("-e", "--email", help="send an email to the user with the selected post contents.", action="store_true")
+    parser.add_argument("-o", "--output", help="print selected posts to stdout.", action="store_true")
+    parser.add_argument("-u", "--urls", help="print just the links to stdout. Only works when used with --output", action="store_true")
+    parser.add_argument("-a", "--afterutc", help="only retrieve posts from after the last run.", action="store_true")
+    parser.add_argument("-m", "--minscore", type=int, help=f"the minimum amount of score a post needs to be selected initially. Default = {min_post_score}")
+    parser.add_argument("-n", "--numfetch", type=int, help=f"how many posts to fetch from reddit. Default = {num_fetched_posts}")
     # positional
-    parser.add_argument("subreddit", help="Subreddit to select the posts from, 'r/' is not necessary.")
+    parser.add_argument("subreddit", help="subreddit to select the posts from, 'r/' is not necessary.")
     args = parser.parse_args()
 
     # Loads arguments
     if args.verbose:
-        logging.basicConfig(level=logging.DEBUG, format="%(levelname)s : [%(funcName)s] %(message)s")
+        logging.basicConfig(level=logging.DEBUG, format="%(levelname)s: [%(funcName)s] %(message)s")
     else:
-        logging.basicConfig(level=logging.INFO, format="%(levelname)s : [%(funcName)s] %(message)s")
+        logging.basicConfig(level=logging.INFO, format="%(levelname)s: [%(funcName)s] %(message)s")
 
     if args.email:
         send_email = True
