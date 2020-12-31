@@ -1,5 +1,25 @@
+"""
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
 """ Find the most upvoted reddit posts and send an email with the contents.
-    Uses `gpg` to decrypt the necessary files.
+    Uses `gpg` to decrypt the necessary files and yagmail to send the email.
 """
 
 import yagmail, subprocess, os, argparse, logging, time, json, requests, math, sys
@@ -11,7 +31,6 @@ email_password_path = f"{user_path}/.neomutt/account.gpg"
 decrypt_command="gpg --batch -q --decrypt"
 email_password_command = f"{decrypt_command} {email_password_path}"
 # GLOBALS
-version = "1.2.1"
 subreddit = "mealtimevideos"
 num_fetched_posts = 150
 min_post_score = 5
