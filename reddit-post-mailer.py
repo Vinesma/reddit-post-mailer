@@ -2,7 +2,7 @@
     Uses `gpg` to decrypt the necessary files.
 """
 
-import yagmail, subprocess, os, argparse, logging, time, json, requests
+import yagmail, subprocess, os, argparse, logging, time, json, requests, math, sys
 
 # PATHS
 user_path = os.path.expanduser("~")
@@ -16,6 +16,7 @@ subreddit = "mealtimevideos"
 num_fetched_posts = 150
 min_post_score = 5
 lower_limit = 3
+reddit_retrieve_limit = 100
 epoch = 0
 send_email = False
 print_content = False
@@ -151,14 +152,33 @@ def sendMail(posts):
 def fetchPosts():
     """ Fetch reddit submissions from a subreddit.
     """
-    headers = {'Host': 'www.reddit.com', 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:84.0) Gecko/20100101 Firefox/84.0'}
-    response = requests.get(f"https://www.reddit.com/r/{subreddit}/.json?limit={num_fetched_posts}", headers=headers)
+    if num_fetched_posts > reddit_retrieve_limit:
+        num_requests = math.ceil(num_fetched_posts / reddit_retrieve_limit)
+        num_fetched_posts_last = num_fetched_posts % 100
+    else:
+        num_requests = 1
+
+    logging.debug(f"Calculated the need for {num_requests} requests to satisfy post amount.")
+    count_requests = 0
     subreddit_posts = []
+    after = ""
 
-    if response.status_code == 200:
+    while count_requests < num_requests:
+        logging.debug(f"Making request {count_requests + 1}")
+        headers = {'Host': 'www.reddit.com', 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:84.0) Gecko/20100101 Firefox/84.0'}
+
+        if count_requests == 0:
+            response = requests.get(f"https://www.reddit.com/r/{subreddit}/.json?limit=100", headers=headers)
+        elif count_requests == num_requests - 1 and num_fetched_posts_last != 0:
+            logging.debug(f"Last request reached, only fetching {num_fetched_posts_last} posts")
+            response = requests.get(f"https://www.reddit.com/r/{subreddit}/.json?limit={num_fetched_posts_last}&after={after}", headers=headers)
+        else:
+            response = requests.get(f"https://www.reddit.com/r/{subreddit}/.json?limit=100&after={after}", headers=headers)
+
+        response.raise_for_status()
         response = response.json()
-        posts = response['data']['children']
 
+        posts = response['data']['children']
         for post in posts:
             post_info = post['data']
             new_post = {
@@ -171,12 +191,11 @@ def fetchPosts():
             # Filter really low quality posts
             if new_post['score'] >= min_post_score:
                 subreddit_posts.append(new_post)
-        logging.debug(f"Found {len(subreddit_posts)} suitable posts.")
-    elif response.status_code == 429:
-        logging.info("Too many requests in a short period of time. Try to pace the requests to prevent receiving this message.")
-    else:
-        logging.info(f"Request failed due to an error. Status: {response.status_code} : {response.json()}")
 
+        after = response['data']['after']
+        count_requests += 1
+
+    logging.debug(f"Found {len(subreddit_posts)} suitable posts.")
     return subreddit_posts
 
 def filterPosts(posts):
@@ -218,6 +237,10 @@ def printPosts(posts):
 
 def main():
     loadArgs()
+
+    if num_fetched_posts > 999:
+        print("Too many posts to retrieve, only values less than 1000 are supported.")
+        sys.exit(1)
 
     if use_epoch:
         loadLastDate()
