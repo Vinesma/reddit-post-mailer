@@ -37,6 +37,7 @@ min_post_score = 5
 lower_limit = 3
 reddit_retrieve_limit = 100
 epoch = 0
+user_email = ""
 send_email = False
 print_content = False
 print_links = False
@@ -48,6 +49,7 @@ def loadArgs():
     global num_fetched_posts
     global min_post_score
     global send_email
+    global user_email
     global print_content
     global print_links
     global use_epoch
@@ -58,7 +60,7 @@ def loadArgs():
     # Argument definition
     # optional
     parser.add_argument("-v", "--verbose", help="make the application more verbose.", action="store_true")
-    parser.add_argument("-e", "--email", help="send an email to the user with the selected post contents.", action="store_true")
+    parser.add_argument("-e", "--email", help="The email adress to send the user the selected post contents.")
     parser.add_argument("-o", "--output", help="print selected posts to stdout.", action="store_true")
     parser.add_argument("-u", "--urls", help="print just the links to stdout. Only works when used with --output", action="store_true")
     parser.add_argument("-a", "--afterutc", help="only retrieve posts from after the last run.", action="store_true")
@@ -74,7 +76,8 @@ def loadArgs():
     else:
         logging.basicConfig(level=logging.INFO, format="%(levelname)s: [%(funcName)s] %(message)s")
 
-    if args.email:
+    if args.email is not None:
+        user_email = args.email
         send_email = True
 
     if args.afterutc:
@@ -96,6 +99,7 @@ def loadArgs():
     logging.debug(f"Print to stdout: {print_content}")
     logging.debug(f"Print links only: {print_links}")
     logging.debug(f"Send email: {send_email}")
+    logging.debug(f"User email: {user_email}")
     logging.debug(f"Number of posts to fetch from reddit: {num_fetched_posts}")
     logging.debug(f"Minimum score for submissions: {min_post_score}")
     logging.debug(f"Subreddit: r/{subreddit}")
@@ -163,7 +167,7 @@ def sendMail(posts):
         subject = f"The best {len(posts)} posts from r/{subreddit}!"
     body = formatEmailContent(posts)
 
-    yag = yagmail.SMTP("otaviocos14@gmail.com", email_password)
+    yag = yagmail.SMTP(user_email, email_password)
 
     yag.send(subject=subject, contents=body)
     print("Mail sent.")
@@ -176,8 +180,9 @@ def fetchPosts():
         num_fetched_posts_last = num_fetched_posts % 100
     else:
         num_requests = 1
-
+        num_fetched_posts_last = 100
     logging.debug(f"Calculated the need for {num_requests} requests to satisfy post amount.")
+
     count_requests = 0
     subreddit_posts = []
     after = ""
