@@ -2,20 +2,14 @@
     Uses `gpg` to decrypt the necessary files.
 """
 
-import yagmail, subprocess, praw, os, argparse, logging, time, json
+import yagmail, subprocess, os, argparse, logging, time, json, requests
 
 # PATHS
 user_path = os.path.expanduser("~")
 email_password_path = f"{user_path}/.neomutt/account.gpg"
-reddit_password_path = f"{user_path}/.neomutt/reddit-pass.gpg"
-reddit_client_id_path = f"{user_path}/.neomutt/reddit-client-id.gpg"
-reddit_client_secret_path = f"{user_path}/.neomutt/reddit-client-secret.gpg"
 # COMMANDS
 decrypt_command="gpg --batch -q --decrypt"
 email_password_command = f"{decrypt_command} {email_password_path}"
-reddit_password_command = f"{decrypt_command} {reddit_password_path}"
-reddit_client_id_command = f"{decrypt_command} {reddit_client_id_path}"
-reddit_client_secret_command = f"{decrypt_command} {reddit_client_secret_path}"
 # GLOBALS
 version = "1.2.1"
 subreddit = "mealtimevideos"
@@ -111,7 +105,7 @@ def saveDate():
 def gpgIsFound():
     """ A few checks to see if all necessary gpg files are present.
     """
-    necessary_paths = ["/usr/bin/gpg", email_password_path, reddit_password_path, reddit_client_id_path, reddit_client_secret_path]
+    necessary_paths = ["/usr/bin/gpg", email_password_path]
 
     for path in necessary_paths:
         if not os.path.exists(path):
@@ -155,32 +149,33 @@ def sendMail(posts):
     print("Mail sent.")
 
 def fetchPosts():
-    """ Fetch reddit submissions from a subreddit using praw.
+    """ Fetch reddit submissions from a subreddit.
     """
-    reddit_password = subprocess.getoutput(reddit_password_command)
-    reddit_client_id = subprocess.getoutput(reddit_client_id_command)
-    reddit_client_secret = subprocess.getoutput(reddit_client_secret_command)
-
-    reddit = praw.Reddit(client_id=reddit_client_id, client_secret=reddit_client_secret,
-            password=reddit_password, user_agent=f"linux:reddit-picker:v{version} (by /u/Vinesma)",
-            username="Vinesma")
-
-    subreddit_name = reddit.subreddit(subreddit)
-    subreddit_posts_iterable = subreddit_name.new(limit=num_fetched_posts)
+    headers = {'Host': 'www.reddit.com', 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:84.0) Gecko/20100101 Firefox/84.0'}
+    response = requests.get(f"https://www.reddit.com/r/{subreddit}/.json?limit={num_fetched_posts}", headers=headers)
     subreddit_posts = []
 
-    for post in subreddit_posts_iterable:
-        new_post = {
-                "id": post.id, "title": post.title,
-                "score": post.score, "comment_quantity": post.num_comments, "permalink": f"https://www.reddit.com{post.permalink}",
-                "utc": post.created_utc,
-                "url": post.url
-                }
-        # Filter really low quality posts
-        if new_post['score'] >= min_post_score:
-            subreddit_posts.append(new_post)
+    if response.status_code == 200:
+        response = response.json()
+        posts = response['data']['children']
 
-    logging.debug(f"Found {len(subreddit_posts)} suitable posts.")
+        for post in posts:
+            post_info = post['data']
+            new_post = {
+                    "id": post_info['id'], "title": post_info['title'],
+                    "score": post_info['score'],
+                    "comment_quantity": post_info['num_comments'], "permalink": f"https://www.reddit.com{post_info['permalink']}",
+                    "utc": post_info['created_utc'],
+                    "url": post_info['url']
+                    }
+            # Filter really low quality posts
+            if new_post['score'] >= min_post_score:
+                subreddit_posts.append(new_post)
+        logging.debug(f"Found {len(subreddit_posts)} suitable posts.")
+    elif response.status_code == 429:
+        logging.info("Too many requests in a short period of time. Try to pace the requests to prevent receiving this message.")
+    else:
+        logging.info(f"Request failed due to an error. Status: {response.status_code} : {response.json()}")
 
     return subreddit_posts
 
