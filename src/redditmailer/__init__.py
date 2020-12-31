@@ -27,6 +27,7 @@ import yagmail, subprocess, os, argparse, logging, time, json, requests, math, s
 # PATHS
 user_path = os.path.expanduser("~")
 email_password_path = f"{user_path}/.neomutt/account.gpg"
+save_dir = os.path.join(user_path, ".cache", "redditmailer")
 # COMMANDS
 decrypt_command="gpg --batch -q --decrypt"
 email_password_command = f"{decrypt_command} {email_password_path}"
@@ -109,9 +110,9 @@ def loadLastDate():
     """
     global epoch
 
-    if os.path.isfile("cache.json"):
+    if os.path.isfile(os.path.join(save_dir, "cache.json")):
         logging.debug("Save found.")
-        with open("cache.json", "r") as cacheFile:
+        with open(os.path.join(save_dir, "cache.json"), "r") as cacheFile:
             epoch = json.load(cacheFile)
         logging.debug(f"Epoch is now: {epoch}")
 
@@ -121,7 +122,10 @@ def saveDate():
     global epoch
     epoch = time.time()
 
-    with open("cache.json", "w") as cacheFile:
+    if not os.path.isdir(save_dir):
+        os.mkdir(save_dir)
+
+    with open(os.path.join(save_dir, "cache.json"), "w") as cacheFile:
         cacheFile.write(json.dumps(epoch))
 
     logging.debug("Save successful.")
@@ -288,4 +292,5 @@ def main():
     else:
         logging.error(f"You need gpg installed in your system and all files required for this script to work!")
 
-main()
+if __name__ == "__main__":
+    main()
