@@ -9,7 +9,7 @@ setup(
     description="Find the most upvoted reddit posts and send an email with the contents to the user.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    version="3.0.0",
+    version="3.0.1",
     url="https://github.com/Vinesma/reddit-post-mailer",
     author="Otavio Cornelio",
     author_email="vinesma.work@gmail.com",

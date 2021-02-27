@@ -55,6 +55,7 @@ def loadArgs():
     global print_links
     global use_epoch
     global subreddit
+    global save_dir
 
     # Initializer
     parser = argparse.ArgumentParser(description="Find the most upvoted submissions to a subreddit and email them to the user.")
@@ -67,6 +68,7 @@ def loadArgs():
     parser.add_argument("-a", "--afterutc", help="only retrieve posts from after the last run.", action="store_true")
     parser.add_argument("-m", "--minscore", type=int, help=f"the minimum amount of score a post needs to be selected initially. Default = {min_post_score}")
     parser.add_argument("-n", "--numfetch", type=int, help=f"how many posts to fetch from reddit. Default = {num_fetched_posts}")
+    parser.add_argument("-c", "--cache", help=f"Use a different cache directory. Default = {'~/.cache/redditmailer'}")
     # positional
     parser.add_argument("subreddit", help="subreddit to select the posts from, 'r/' is not necessary.")
     args = parser.parse_args()
@@ -94,6 +96,9 @@ def loadArgs():
 
     if args.numfetch is not None:
         num_fetched_posts = args.numfetch
+
+    if args.cache is not None:
+        save_dir = os.path.expanduser(args.cache)
 
     subreddit = args.subreddit
 
