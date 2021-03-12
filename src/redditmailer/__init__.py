@@ -250,7 +250,7 @@ def filterPosts(posts):
     for post in posts:
         scores.append(post['score'])
 
-    avg_score = sum(scores) / len(scores)
+    avg_score = statistics.mean(scores)
     logging.debug(f"Calculated average score is {avg_score}")
 
     # Filter out posts lesser than the threshold.
