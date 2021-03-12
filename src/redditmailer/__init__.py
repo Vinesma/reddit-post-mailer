@@ -22,7 +22,17 @@ SOFTWARE.
     Uses `gpg` to decrypt the necessary files and yagmail to send the email.
 """
 
-import yagmail, subprocess, os, argparse, logging, time, json, requests, math, sys
+import subprocess
+import os
+import argparse
+import logging
+import time
+import json
+import math
+import sys
+import statistics
+import requests
+import yagmail
 
 # PATHS
 user_path = os.path.expanduser("~")
